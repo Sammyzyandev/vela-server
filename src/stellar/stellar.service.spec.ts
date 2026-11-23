@@ -262,6 +262,28 @@ describe('StellarService', () => {
       expect(transaction.timeBounds?.maxTime).not.toBe('0');
     });
 
+    it('rejects a mismatched network passphrase before loading the account', async () => {
+      const configured = service as unknown as {
+        networkConfig: StellarNetworkConfig;
+      };
+      const originalPassphrase = configured.networkConfig.networkPassphrase;
+      configured.networkConfig.networkPassphrase = Networks.PUBLIC;
+
+      await expect(
+        service.buildPaymentTransaction({
+          sourcePublicKey: SOURCE_PUBLIC_KEY,
+          destination: DESTINATION_PUBLIC_KEY,
+          asset: 'XLM',
+          amount: '1',
+        }),
+      ).rejects.toMatchObject({
+        response: { code: STELLAR_ERROR.NETWORK },
+      });
+      expect(horizon.loadAccount).not.toHaveBeenCalled();
+
+      configured.networkConfig.networkPassphrase = originalPassphrase;
+    });
+
     it.each(['0', '-1', '1.00000001', 'not-a-number'])(
       'rejects invalid amount %s',
       async (amount) => {

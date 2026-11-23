@@ -174,6 +174,7 @@ export class StellarService {
   async buildPaymentTransaction(
     params: BuildPaymentTransactionParams,
   ): Promise<Transaction> {
+    this.assertNetworkPassphrase();
     this.assertPublicKey(params.sourcePublicKey, 'sourcePublicKey');
     this.assertPublicKey(params.destination, 'destination');
     this.assertAmount(params.amount);
@@ -434,6 +435,21 @@ export class StellarService {
       asset.getCode() === 'USDC' &&
       asset.getIssuer() === this.networkConfig.usdcIssuer
     );
+  }
+
+  private assertNetworkPassphrase(): void {
+    const expectedPassphrase = String(
+      this.networkConfig.network === 'testnet'
+        ? 'Test SDF Network ; September 2015'
+        : 'Public Global Stellar Network ; September 2015',
+    );
+    if (this.networkConfig.networkPassphrase !== expectedPassphrase) {
+      throw new ServiceUnavailableException({
+        statusCode: 503,
+        message: 'Stellar network configuration is invalid.',
+        code: STELLAR_ERROR.NETWORK,
+      });
+    }
   }
 
   private invalidTransaction(message: string): BadRequestException {
